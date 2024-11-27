@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "maternity-calendar-project"
+version = "0.1.0"
+description = ""
+authors = ["MCDAngelo"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+google-api-python-client = "^2.153.0"
+google-auth-httplib2 = "^0.2.0"
+google-auth-oauthlib = "^1.2.1"
+pandas = "^2.2.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
