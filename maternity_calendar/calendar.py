@@ -37,7 +37,7 @@ class Calendar:
 
     def classify_event_types(self):
         self.event_mappings = {
-            "HR": "HR",
+            "HR": "HR|Bad|bad",
             "Health": "Health|health",
             "Lawyer": "Deborah",
             "Work": "Work",
@@ -67,3 +67,4 @@ class Calendar:
         self.full_df["weekday_name"] = self.full_df.index.day_name()  # type: ignore
         self.full_df["year"] = self.full_df.index.year  # type: ignore
         self.full_df["week_num"] = self.full_df.index.strftime("%U")  # type: ignore
+        self.full_df["week_num"] = self.full_df["week_num"].apply(int)
