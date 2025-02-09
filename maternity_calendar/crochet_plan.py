@@ -8,17 +8,19 @@ class CrochetPlan:
         self.weeks_per_row = crochet_config.get("weeks_per_row")
         self.stitches_per_day = crochet_config.get("stitches_per_day")
         self.output_file = crochet_config.get("output_file")
+        self.fyi_file = crochet_config.get("fyi_file")
         self.ordered_vals = crochet_config.get("ordered_vals")
         self.cal.prepare_events()
         self.df = self.cal.full_df.copy()
-        self.check_date_overlap()
         self.add_crochet_info()
+        self.check_date_overlap()
         self.condense_week_types()
         self.convert_to_crochet_instructions()
+        self.save_FYI_dates()
 
     def check_date_overlap(self):
         print("Overall totals for each event type:")
-        print(self.df[["HR", "Health", "Lawyer", "Work", "FYI"]].sum(axis=0))
+        print(self.df[self.ordered_vals + ["FYI"]].sum(axis=0))
         excl_mask = [True] * self.df.shape[0]
         for i, col in enumerate(self.ordered_vals):
             mask = self.df[col]
@@ -26,15 +28,18 @@ class CrochetPlan:
             print(f"After accounting for {col}, items remaining are:")
             print(self.df.loc[excl_mask][self.ordered_vals[i + 1 :]].sum(axis=0))
 
-        pass
-
     def assign_date_type(self, r):
-        for i in ["Lawyer", "HR", "Work", "Health"]:
-            if r[i]:
-                if i == "Work":
-                    return "HR"
-                return i
-        return "Other"
+        d_type = "Other"
+        if r["Bad"] & r["Lawyer"]:
+            d_type = "Bad+Lawyer"
+        else:
+            for i in ["Bad", "Lawyer", "Work", "Health"]:
+                if r[i]:
+                    d_type = i
+        if r["FYI"]:
+            return f"{d_type}-FYI"
+        else:
+            return d_type
 
     def add_crochet_info(self):
         self.df["type"] = self.df.apply(self.assign_date_type, axis=1)
@@ -66,8 +71,6 @@ class CrochetPlan:
         self.instructions.append(
             f"Base: chain stitch {self.foundation_row} in baby pink"
         )
-        self.short_inst = []
-        self.short_inst.append(f"Base: chain {self.foundation_row} in baby pink.")
         for row in self.row_info:
             self.build_row_instructions(row)
 
@@ -87,19 +90,29 @@ class CrochetPlan:
             Once the week is complete, change to baby pink, chain one, turn work
             and single crochet into each of the next {7*sts_per_day} stitches
         """
+        marker = None
         for week, info in row.items():
-            week_inst = f"\nCalendar Row {week}: \n"
-            for i, day_type in enumerate(info):
-                day_type_info = self.crochet_settings.get(day_type[0])
-                stitch_type = day_type_info.get("stitch")
-                colour = day_type_info.get("colour", "baby pink")
-                n_stitches = day_type[1] * self.stitches_per_day
+            week_inst = f"\n\nCalendar Row {week}: \n"
+            for i, day_dict in enumerate(info):
+                day_type = day_dict[0]
+                if "-FYI" in day_type:
+                    marker = True
+                    day_type = day_type.replace("-FYI", "")
+                day_type_dict = self.crochet_settings.get(day_type)
+                stitch_type = day_type_dict.get("stitch")
+                colour = day_type_dict.get("colour", "baby pink")
+                n_stitches = day_dict[1] * self.stitches_per_day
                 if i == 0:
                     week_inst += f"Using {colour}, chain {self.stitches_per_day}, and "
                     n_stitches -= 1
                 else:
                     week_inst += f"Using {colour}, "
-                week_inst += f"{stitch_type} {n_stitches} times.\n "
+                week_inst += f"{stitch_type} {n_stitches} times"
+                if marker:
+                    week_inst += ", adding stitch marker to the middle stitch.\n"
+                    marker = None
+                else:
+                    week_inst += ".\n"
 
             if colour == "baby pink":  # type: ignore
                 week_inst += "Turn the work, chain 1 and "
@@ -124,3 +137,12 @@ class CrochetPlan:
                 (k, sum(1 for _ in group)) for k, group in groupby(types)
             ]
             self.row_info.append({week_num: count_consecutive_days})
+
+    def save_FYI_dates(self):
+        fyi_dates = self.df.loc[self.df["FYI"]]
+        with open(self.fyi_file, "w") as f:
+            for _, r in fyi_dates.iterrows():
+                r_num = r["crochet_row_num"]
+                date_type = r["type"].replace("-FYI", "")
+                fyi = r["title"]
+                f.write(f"Week row {r_num}: [{date_type}] {fyi}\n")

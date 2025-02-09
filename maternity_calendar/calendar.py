@@ -5,6 +5,7 @@ class Calendar:
     def __init__(self, filename):
         self.raw_df = pd.read_csv(filename)
         self.start_date = "2023-10-01"
+        self.end_date = "2024-11-02"
         self.convert_dates()
 
     def prepare_events(self):
@@ -37,7 +38,7 @@ class Calendar:
 
     def classify_event_types(self):
         self.event_mappings = {
-            "HR": "HR|Bad|bad",
+            "Bad": "Bad|bad",
             "Health": "Health|health",
             "Lawyer": "Deborah",
             "Work": "Work",
@@ -51,7 +52,7 @@ class Calendar:
     def create_daily_view(self):
         self.full_df = self.daily_events_df.groupby(["date"]).agg({
             "title": lambda x: list(x),
-            "HR": lambda x: max(x),
+            "Bad": lambda x: max(x),
             "Health": lambda x: max(x),
             "Lawyer": lambda x: max(x),
             "Work": lambda x: max(x),
@@ -68,3 +69,5 @@ class Calendar:
         self.full_df["year"] = self.full_df.index.year  # type: ignore
         self.full_df["week_num"] = self.full_df.index.strftime("%U")  # type: ignore
         self.full_df["week_num"] = self.full_df["week_num"].apply(int)
+        self.full_df = self.full_df.loc[self.full_df.index <= self.end_date]
+        print(self.full_df.index)
