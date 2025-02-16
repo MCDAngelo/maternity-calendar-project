@@ -33,7 +33,7 @@ class CrochetPlan:
         if r["Bad"] & r["Lawyer"]:
             d_type = "Bad+Lawyer"
         else:
-            for i in ["Bad", "Lawyer", "Work", "Health"]:
+            for i in reversed(["Bad", "Lawyer", "Work", "Health"]):
                 if r[i]:
                     d_type = i
         if r["FYI"]:
@@ -43,6 +43,7 @@ class CrochetPlan:
 
     def add_crochet_info(self):
         self.df["type"] = self.df.apply(self.assign_date_type, axis=1)
+        print(self.df["type"].value_counts())
         self.df = self.df.reset_index().rename(columns={"index": "date"})
         self.df["crochet_row_num"] = (
             self.df.groupby(
